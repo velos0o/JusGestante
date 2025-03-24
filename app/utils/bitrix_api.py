@@ -84,7 +84,9 @@ def save_connection_config(account_name, token, api_type="rest"):
         # Opcionalmente, salvar em arquivo para persistência (apenas para desenvolvimento)
         # Em produção, usar os secrets do Streamlit
         try:
+            # Garantir que o diretório exista
             os.makedirs("app/data", exist_ok=True)
+            
             with open("app/data/connection_config.json", "w") as f:
                 # Não salvar o token em texto puro - apenas salvar referências
                 config = {
@@ -95,8 +97,9 @@ def save_connection_config(account_name, token, api_type="rest"):
                 json.dump(config, f)
             return True
         except Exception as e:
-            st.warning(f"Não foi possível salvar configuração: {str(e)}")
-            return False
+            st.warning(f"Não foi possível salvar configuração em arquivo: {str(e)}")
+            # Retorna True mesmo se falhar ao salvar em arquivo, pois a config está no session_state
+            return True
     except Exception as e:
         st.error(f"Erro ao salvar configuração: {str(e)}")
         return False
@@ -113,24 +116,28 @@ def load_connection_config():
         if "api" in st.secrets and "bitrix_webhook" in st.secrets["api"]:
             # Configuração encontrada nos secrets
             config = {}
-            if "banco_de_dados" in st.secrets:
-                # Adicionar outras configurações relevantes
-                pass
-                
+            
             # Configurar API do Bitrix
             webhook_url = st.secrets["api"]["bitrix_webhook"]
             if webhook_url:
-                parts = webhook_url.split("/rest/")
-                if len(parts) == 2:
-                    account_name = parts[0].split("https://")[1].split(".bitrix24.com.br")[0]
-                    token = parts[1].rstrip("/")
-                    config = {
-                        "account_name": account_name,
-                        "token": token,
-                        "api_type": "rest",
-                        "urls": setup_bitrix_connection(account_name, token, "rest")
-                    }
-                    return config
+                # Extrair informações do webhook
+                if "https://" in webhook_url and "bitrix24.com.br/rest/" in webhook_url:
+                    parts = webhook_url.split("/rest/")
+                    if len(parts) == 2:
+                        account_name = parts[0].split("https://")[1].split(".bitrix24.com.br")[0]
+                        token = parts[1].rstrip("/")
+                        
+                        # Criar configuração completa
+                        config = {
+                            "account_name": account_name,
+                            "token": token,
+                            "api_type": "rest",
+                            "urls": setup_bitrix_connection(account_name, token, "rest")
+                        }
+                        
+                        # Salvar na sessão para uso futuro
+                        st.session_state.bitrix_config = config
+                        return config
     except Exception as e:
         st.warning(f"Não foi possível carregar secrets: {str(e)}")
     
@@ -140,10 +147,16 @@ def load_connection_config():
         
     # Como último recurso, tenta carregar do arquivo
     try:
+        # Verificar se o arquivo existe
+        if not os.path.exists("app/data/connection_config.json"):
+            st.error("Erro ao carregar configuração: arquivo de configuração não encontrado")
+            return None
+            
         with open("app/data/connection_config.json", "r") as f:
             stored_config = json.load(f)
             
             # Se encontrou no arquivo mas não tem o token, precisa solicitar ao usuário
             return stored_config
-    except:
+    except Exception as e:
+        st.error(f"Erro ao carregar configuração: {str(e)}")
         return None 

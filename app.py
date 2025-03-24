@@ -15,6 +15,9 @@ st.set_page_config(
 # Título principal
 st.title("JusGestante - Painel de Gestão")
 
+# Garantir que o diretório de dados exista
+os.makedirs("app/data", exist_ok=True)
+
 # Verificar se há configuração de conexão
 config = load_connection_config()
 
@@ -22,6 +25,19 @@ if not config:
     # Se não houver configuração, mostrar formulário
     st.write("### Configuração da Conexão com Bitrix24")
     st.write("Para usar este aplicativo, é necessário configurar a conexão com o Bitrix24.")
+    
+    # Verificar se há secrets configurados
+    has_secrets = False
+    webhook_url = ""
+    try:
+        if "api" in st.secrets and "bitrix_webhook" in st.secrets["api"]:
+            webhook_url = st.secrets["api"]["bitrix_webhook"]
+            has_secrets = bool(webhook_url)
+    except:
+        pass
+    
+    if has_secrets:
+        st.success("Secrets detectados! Você pode usar as credenciais pré-configuradas ou inserir novas.")
     
     # Adicionar seleção de tipo de API
     api_type = st.radio(
@@ -51,28 +67,40 @@ if not config:
         """)
     
     with st.form("setup_connection"):
-        account_name = st.text_input("Nome da Conta Bitrix24", value="b24-lffzg9")
+        # Extrair nome da conta do webhook, se disponível
+        default_account_name = ""
+        default_token = ""
+        if webhook_url and "https://" in webhook_url and "bitrix24.com.br/rest/" in webhook_url:
+            parts = webhook_url.split("/rest/")
+            if len(parts) == 2:
+                default_account_name = parts[0].split("https://")[1].split(".bitrix24.com.br")[0]
+                default_token = parts[1].rstrip("/")
+        
+        account_name = st.text_input("Nome da Conta Bitrix24", value=default_account_name)
         
         # Label adequado ao tipo de API
         token_label = "Token do Webhook" if api_type_value == "rest" else "Token do BI Connector"
         
         # Usar valor padrão do secrets se disponível
-        default_token = ""
-        try:
-            if api_type_value == "rest" and "api" in st.secrets and "bitrix_webhook" in st.secrets["api"]:
-                webhook_url = st.secrets["api"]["bitrix_webhook"]
-                if webhook_url:
-                    parts = webhook_url.split("/rest/")
-                    if len(parts) == 2:
-                        default_token = parts[1].rstrip("/")
-        except:
-            pass
-            
         token = st.text_input(token_label, type="password", value=default_token)
+        
+        # Opção para usar secrets
+        use_secrets = False
+        if has_secrets:
+            use_secrets = st.checkbox("Usar credenciais dos secrets", value=True, 
+                                     help="Se marcado, usará as credenciais configuradas no servidor Streamlit")
         
         submitted = st.form_submit_button("Salvar Configuração")
         
         if submitted:
+            if use_secrets and has_secrets:
+                # Extrair dados do webhook nos secrets
+                parts = webhook_url.split("/rest/")
+                if len(parts) == 2:
+                    account_name = parts[0].split("https://")[1].split(".bitrix24.com.br")[0]
+                    token = parts[1].rstrip("/")
+                    api_type_value = "rest"  # Webhooks são sempre REST API
+            
             if account_name and token:
                 if save_connection_config(account_name, token, api_type_value):
                     # Testar conexão antes de prosseguir
