@@ -1,6 +1,7 @@
 # Arquivos de configuração
 *.env
 app/data/connection_config.json
+.streamlit/secrets.toml
 
 # Arquivos do Python
 __pycache__/
