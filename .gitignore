@@ -1,0 +1,50 @@
+# Arquivos de configuração
+*.env
+app/data/connection_config.json
+
+# Arquivos do Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Caches
+.streamlit/
+.cache/
+
+# Diretórios de dados locais
+data/
+
+# Logs
+*.log
+
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+# Arquivos de IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db 

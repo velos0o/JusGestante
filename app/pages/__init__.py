@@ -1,0 +1,1 @@
+# Este arquivo permite que a pasta seja reconhecida como um pacote Python 
