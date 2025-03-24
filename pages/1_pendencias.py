@@ -6,88 +6,15 @@ import json
 import os
 import traceback
 from datetime import datetime
+import sys
+
+# Adicionar o diretório raiz ao path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from app.utils.bitrix_api import get_bitrix_data, load_connection_config, is_streamlit_cloud
 
 # Título da página
 st.title("Pendências")
 st.write("Visualização de pendências e datas marcadas do Bitrix24")
-
-# Função para carregar configuração
-def load_connection_config():
-    try:
-        with open("app/data/connection_config.json", "r") as f:
-            return json.load(f)
-    except Exception as e:
-        st.error(f"Erro ao carregar configuração: {str(e)}")
-        return None
-
-# Função para obter dados do Bitrix
-def get_bitrix_data(url):
-    try:
-        # Exibir URL para diagnóstico quando depuração estiver ativada
-        if st.session_state.get('debug_mode', False):
-            st.write(f"Requisitando URL: {url}")
-
-        # Fazer a requisição
-        response = requests.get(url)
-        
-        # Exibir informações de resposta para diagnóstico
-        if st.session_state.get('debug_mode', False):
-            st.write(f"Status code: {response.status_code}")
-            
-        if response.status_code == 200:
-            try:
-                # Para diagnóstico, mostrar os primeiros caracteres da resposta
-                if st.session_state.get('debug_mode', False):
-                    st.write("Primeiros 500 caracteres da resposta:")
-                    st.code(response.text[:500])
-                
-                # Tentar processar como JSON
-                data = response.json()
-                
-                # Se não for uma lista ou for uma resposta de erro
-                if not isinstance(data, list) or (isinstance(data, dict) and "error" in data):
-                    if st.session_state.get('debug_mode', False):
-                        st.error("Formato de resposta inválido ou erro")
-                        st.json(data)
-                    return None
-                
-                # A primeira linha contém os nomes das colunas
-                if len(data) > 0:
-                    columns = data[0]
-                    rows = data[1:]
-                    
-                    # Criar um dicionário de dados para o DataFrame
-                    df_data = {col: [] for col in columns}
-                    
-                    # Preencher o dicionário com os dados das linhas
-                    for row in rows:
-                        for i, col in enumerate(columns):
-                            if i < len(row):
-                                df_data[col].append(row[i])
-                            else:
-                                df_data[col].append("")
-                    
-                    # Criar o DataFrame
-                    df = pd.DataFrame(df_data)
-                    
-                    # Mostrar detalhes para diagnóstico
-                    if st.session_state.get('debug_mode', False):
-                        st.write(f"DataFrame criado com {len(df)} linhas e {len(columns)} colunas")
-                        
-                    return df
-                else:
-                    return pd.DataFrame()
-            except Exception as e:
-                st.error(f"Erro ao processar resposta: {str(e)}")
-                st.error(traceback.format_exc())
-                return None
-        else:
-            st.error(f"Erro na requisição: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"Erro ao conectar com o Bitrix24: {str(e)}")
-        st.error(traceback.format_exc())
-        return None
 
 # Função para gerar dados simulados
 def generate_simulated_data(num_rows=100):
@@ -101,7 +28,7 @@ def generate_simulated_data(num_rows=100):
     })
     return df
 
-# Carregar configuração
+# Carregar configuração usando a função importada
 config = load_connection_config()
 
 # Inicializar variáveis de depuração
